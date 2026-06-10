@@ -383,3 +383,153 @@ docker exec -it mosquitto ls -la /mosquitto/log
 ```bash
 docker ps -a
 ```
+
+
+# Home Assistant Docker Installation
+
+## Directory Structure
+
+Home Assistant configuration is stored in:
+
+```text
+/server/configs/homeAssist
+```
+
+Create the directory if it does not exist:
+
+```bash
+mkdir -p /server/configs/homeAssist
+```
+
+---
+
+## Docker Compose Configuration
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    environment:
+      TZ: Asia/Kolkata
+    volumes:
+      - /server/configs/homeAssist:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+```
+
+---
+
+## Start Home Assistant
+
+Navigate to the Home Assistant directory:
+
+```bash
+cd /server/configs/homeAssist
+```
+
+Start the container:
+
+```bash
+docker compose up -d
+```
+
+Verify the container is running:
+
+```bash
+docker ps
+```
+
+View logs:
+
+```bash
+docker logs -f homeassistant
+```
+
+---
+
+## Access Home Assistant
+
+Open:
+
+```text
+http://<SERVER_IP>:8123
+```
+
+Example:
+
+```text
+http://192.168.1.100:8123
+```
+
+Complete the initial Home Assistant setup wizard.
+
+---
+
+# Configure Reverse Proxy Support
+
+If Home Assistant is accessed through a reverse proxy such as Cloudflare Tunnel, Nginx, Traefik, or Caddy, configure trusted proxies.
+
+Edit:
+
+```bash
+nano /server/configs/homeAssist/configuration.yaml
+```
+
+Add:
+
+```yaml
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+```
+
+For Docker-based reverse proxies, you may also need:
+
+```yaml
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - 172.17.0.0/16
+    - 172.16.0.0/12
+```
+
+Save the file and restart Home Assistant:
+
+```bash
+docker restart homeassistant
+```
+
+Verify the configuration:
+
+```bash
+docker logs -f homeassistant
+```
+
+The following error should no longer appear:
+
+```text
+A request from a reverse proxy was received from 127.0.0.1,
+but your HTTP integration is not set-up for reverse proxies
+```
+
+---
+
+## Verify External Access
+
+Test local access:
+
+```text
+http://<SERVER_IP>:8123
+```
+
+Test external access through your reverse proxy or Cloudflare Tunnel URL.
+
+Once both local and external access are working, proceed with installing HACS and other integrations.
